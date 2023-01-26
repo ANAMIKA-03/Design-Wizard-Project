@@ -1,0 +1,791 @@
+import _ from 'lodash';
+export const timelineFunctions = (canvas:any) => {
+        const REFRESH_INTERVAL = 200;
+        let draggingItem:any;
+        const maxSeconds = 40
+        const timeLengthMilliseconds = maxSeconds * 1000;
+  
+        // Only used to set CSS classes
+        $scope.selectedSequenceId = null;
+  
+        const MIN_DURATION = 3000;
+  
+        $scope.ticks = _.range(0, maxSeconds);
+  
+        $scope.currentTime = '0';
+        $scope.positionIndicator = 0;
+        $scope.isVideoPlaying = false;
+        $scope.videos = [];
+        $scope.animations = [];
+  
+        let resizingObject:any;
+  
+        const fabricCanvas = canvas;
+  
+        let scrollZoneElement:any;
+        let scrollZoneWidth:any;
+        let windowElement:any;
+        // <main ui-view="master" ...
+        let mainTag:any;
+        $scope.windowHorizontalScroll = 0;
+  
+        /**
+         * Convert a width in pixels to milliseconds.
+         * @param width Width of the element in pixels.
+         * @return {number} Milliseconds
+         */
+        const widthToDuration = (width:any) => {
+          const duration = (width / scrollZoneWidth) * maxSeconds * 1000;
+          return Math.round(duration * 100) / 100;
+        };
+  
+        /**
+         * Convert a time in milliseconds to a percentage of the timeline.
+         * @param timeInMilliseconds Duration of the animation/video in milliseconds.
+         * @return {string} Number with percentage.
+         */
+        const timeToPercent = (timeInMilliseconds:any) =>{
+          return `${(Math.round(timeInMilliseconds) / timeLengthMilliseconds) * 100}%`;
+        }
+  
+        /**
+         * Convert a time in milliseconds to pixels on the timeline.
+         * The result is NOT rounded.
+         *
+         * @param timeInMilliseconds
+         * @return {number}
+         */
+        const timeToWidth = (timeInMilliseconds:any) =>
+          scrollZoneWidth * (timeInMilliseconds / timeLengthMilliseconds);
+  
+        /**
+         * Convert a x coordinate to time in milliseconds.
+         * @param position X coordinate.
+         * @return {number} Milliseconds.
+         */
+        const positionToTime = (position:any) =>
+          Math.round((position / scrollZoneWidth) * maxSeconds * 1000);
+  
+        const updateScrollZoneElementWidth = () => {
+          const rect = scrollZoneElement.getBoundingClientRect();
+          scrollZoneWidth = rect.width;
+        };
+  
+        const findAnimationAtTime = (timeInMilliseconds:any) => {
+          for (const animation of $scope.animations) {
+            if (
+              animation.startTime <= timeInMilliseconds &&
+              animation.endTime >= timeInMilliseconds
+            ) {
+              return animation;
+            }
+          }
+          return null;
+        };
+  
+        const methodToNonActiveAnimations = (activeAnimation:any, method:any) => {
+          $scope.animations
+            .filter((animation:any) => animation !== activeAnimation)
+            .forEach(({ object }:any) => object[method]());
+        }
+  
+        const lockAnimations = (activeAnimation:any) => {
+          methodToNonActiveAnimations(activeAnimation, 'lockObject');
+        };
+  
+        const hideAnimations = (activeAnimation:any) => {
+          methodToNonActiveAnimations(activeAnimation, 'hide');
+        };
+  
+        /**
+         * Get all video objects from canvas.
+         * @return {Array}
+         */
+        const getVideos = () => canvas.fabric.getVideoObjects();
+  
+        const activateAnimation = (time = $scope.currentTime) => {
+          $scope.selectedSequenceId = null;
+          fabricCanvas.discardActiveObject();
+          const activeAnimation = findAnimationAtTime(time);
+          lockAnimations(activeAnimation);
+          hideAnimations(activeAnimation);
+  
+          if (activeAnimation) {
+            const { object, sequenceId } = activeAnimation;
+            $scope.selectedSequenceId = sequenceId;
+            object.show();
+            object.unlockObject();
+            fabricCanvas.setActiveObject(object);
+          }
+        };
+  
+        const activateVideo = (milliseconds = $scope.currentTime) => {
+          getVideos().forEach(video => {
+            const eneTime = video.startTime + video.duration;
+            if (video.startTime > milliseconds || eneTime < milliseconds) {
+              // The video is not active hide it
+              video.hide();
+              // Set the time to it's offset; this should help avoid seek delays
+              // as it is the correct start time for the video; unless the timeline is clicked
+              // or the video edited.
+              video.setCurrentTime(video.offset);
+            } else {
+              // the video is active show it and calculate it's current time
+              video.show();
+              video.setCurrentTime(milliseconds - video.startTime + video.offset);
+            }
+          });
+        };
+  
+        const setObjectsToTime = (time = $scope.currentTime) => {
+          fabricCanvas.setCanvasObjectsToAnimationTime(time);
+          activateAnimation(time);
+          activateVideo(time);
+          canvas.fabric.renderAll();
+        };
+  
+        const setCurrentTime = _.throttle(milliseconds => {
+          animationsService.stopAnimation(false);
+          $scope.isVideoPlaying = false;
+          $scope.currentTime = milliseconds;
+          $scope.positionIndicator = timeToWidth(milliseconds);
+          setObjectsToTime();
+        }, REFRESH_INTERVAL);
+  
+        const calcResize = (ui:any) => {
+          // Get the left and right of the resizing object
+          const left = positionToTime(ui.position.left);
+          const right = positionToTime(ui.position.left + ui.size.width);
+  
+          const isResizingFromLeft =
+            ui.originalPosition.left - ui.position.left !== 0;
+          const isResizingFromRight =
+            !isResizingFromLeft &&
+            ui.size.width - resizingObject.previousWidth !== 0;
+  
+          // If the limits are exceeded stop resizing.
+          const stopResizing =
+            (isResizingFromLeft && left <= resizingObject.minStart) ||
+            (isResizingFromRight && right >= resizingObject.maxEnd);
+  
+          // Change the start/end time, depending on the resize direction.
+          // When moving from the left the endTime cannot change.
+          if (isResizingFromLeft) {
+            resizingObject.startTime = Math.max(left, resizingObject.minStart);
+          } else if (isResizingFromRight) {
+            resizingObject.endTime = Math.min(right, resizingObject.maxEnd);
+          }
+  
+          // Set the duration based on the start end time. Only one of these values has changed and
+          // the other one is constrained e.g. Math.min(right, resizingObject.maxEnd)
+          // Therefor the duration cannot exceed the max duration
+          resizingObject.duration =
+            resizingObject.endTime - resizingObject.startTime;
+  
+          // For videos recalculate the offset at the start or end.
+          // Again only one of these will have changed.
+          if (resizingObject.type === 'video') {
+            if (isResizingFromLeft) {
+              resizingObject.offset = Math.max(
+                resizingObject.totalLength -
+                  resizingObject.duration -
+                  resizingObject.endOffset,
+                0
+              );
+            } else if (isResizingFromRight) {
+              resizingObject.endOffset = Math.max(
+                resizingObject.totalLength -
+                  resizingObject.duration -
+                  resizingObject.offset,
+                0
+              );
+            }
+          }
+  
+          // Store values for next loop
+          resizingObject.previousStartTime = resizingObject.startTime;
+          resizingObject.previousWidth = ui.size.width;
+  
+          return stopResizing;
+        };
+  
+        const setResizeClasses = (object:any) => {
+          const canReduceDuration = object.duration > MIN_DURATION;
+          let canResizeToLeft = object.minStart < object.startTime;
+          let canResizeToRight = object.endTime < object.maxEnd;
+  
+          if (object.type === 'video') {
+            canResizeToLeft = canResizeToLeft && object.offset > 0;
+            canResizeToRight = canResizeToRight && object.endOffset > 0;
+          }
+  
+          object.resizeStart = 'none';
+          if (canResizeToLeft && canReduceDuration) {
+            object.resizeStart = 'both';
+          } else if (canResizeToLeft) {
+            object.resizeStart = 'left';
+          } else if (canReduceDuration) {
+            object.resizeStart = 'right';
+          }
+  
+          object.resizeEnd = 'none';
+          if (canResizeToRight && canReduceDuration) {
+            object.resizeEnd = 'both';
+          } else if (canReduceDuration) {
+            object.resizeEnd = 'left';
+          } else if (canResizeToRight) {
+            object.resizeEnd = 'right';
+          }
+        };
+  
+        /**
+         * Handler for on start resize event. Calculate min x and max x coordinate
+         * for resizing.
+         *
+         *            Timeline
+         * -------------------------------
+         *         mx  x1    x2  Mx
+         *   +-----+   +-----+   +-----+
+         *   |  A  |   |  B  |   |  C  |
+         *   +-----+   +-----+   +-----+
+         * -------------------------------
+         *
+         * Animations:
+         *  - If we are resizing B, x1 can go as far as mx whereas x2 can go up to Mx.
+         *  - If A or C don't exist, the mx and Mx will be the beginning (0) and
+         *  end (scroll bar length) of the scroll bar.
+         *
+         * Videos:
+         *  - If we are resizing B, x1 can go as far as mx or x1 - offset. x2 can go
+         *  up to Mx or duration of the video.
+         *  - If A or C don't exist, the mx and Mx will be the beginning (0) and
+         *  end (scroll bar length) of the scroll bar.
+         *  - Offset is how many milliseconds we are trimming from the beginning.
+         *  - For videos, the maximum they can be resized to the right will be
+         *  equal to: totalLength - offset (+ startTime to get the actual X in pixels)
+         *
+         * {@link http://api.jqueryui.com/resizable/} For information about params.
+         * @param event
+         * @param ui
+         */
+        const onStartResize = (event:any, ui:any) => {
+          animationsService.stopAnimation();
+          updateScrollZoneElementWidth();
+  
+          const objectId = ui.element.data('uid');
+          const isVideo = ui.element.hasClass('video');
+          const objects = isVideo ? $scope.videos : $scope.animations;
+          resizingObject = _.find(objects, object => object.uid === objectId);
+          resizingObject.previousWidth = ui.size.width;
+          resizingObject.previousStartTime = resizingObject.startTime;
+        };
+  
+        /**
+         * Handler for on resize event, update startTime, duration and endTime of
+         * object.
+         * {@link http://api.jqueryui.com/resizable/} For information about params.
+         * @param event
+         * @param ui
+         */
+        const onResize = function onResize(event:any, ui:any) {
+          if (calcResize(ui)) {
+            $(this)
+              .resizable('widget')
+              .trigger('mouseup');
+          }
+          resizingObject.object.setStartTime(resizingObject.startTime);
+          resizingObject.object.setDuration(resizingObject.duration);
+  
+          if (resizingObject.type === 'video') {
+            resizingObject.object.setOffset(resizingObject.offset);
+          }
+  
+          setResizeClasses(resizingObject);
+          setObjectsToTime();
+        };
+  
+        /**
+         * Handler for on stop resize event. Update startTime, duration and offset
+         * of canvas object. The correct values for these are calculated in the
+         * onResize() method.
+         */
+        const onStopResize = (event:any, ui:any) => {
+          calcResize(ui);
+          resizingObject.object.setStartTime(resizingObject.startTime);
+          resizingObject.object.setDuration(resizingObject.duration);
+  
+          if (resizingObject.type === 'video') {
+            resizingObject.object.setOffset(resizingObject.offset);
+          }
+          reloadList(
+            resizingObject.type === 'video',
+            resizingObject.type !== 'video'
+          );
+          setObjectsToTime();
+          setTimeout() => {
+            currentCompositionService.updateComposition();
+          });
+        };
+  
+        /**
+         * Set the max amounts that each object in the list can be resized by in both directions.
+         *
+         * @param {Array} orderedList
+         */
+        const setLeftRightBounds = (orderedList:any) => {
+          orderedList.forEach((object:any, index:any, list:any) => {
+            // 0 or the end of the previous object
+            object.minStart = index > 0 ? list[index - 1].endTime : 0;
+            // max timeline length or the start of the next object
+            object.maxEnd =
+              index < list.length - 1
+                ? list[index + 1].startTime
+                : timeLengthMilliseconds;
+  
+            if (object.type === 'video') {
+              // A video can only be increased to the left by the seconds cut off by its offset
+              object.minStart = Math.max(
+                object.minStart,
+                object.startTime - object.offset
+              );
+              // A video can only be increased to the right by the time cut off the end
+              object.maxEnd = Math.min(
+                object.maxEnd,
+                object.endTime + object.endOffset
+              );
+            }
+  
+            setResizeClasses(object);
+          });
+        };
+  
+        /**
+         * Load animations from canvas and build data structure to be rendered in
+         * timeline.
+         */
+        const loadTimesFromGroups = () => {
+          const groups = animationsService.getAnimatedGroups();
+          const animations:any = [];
+  
+          groups.forEach((group:any) => {
+            const {
+              hasLogo,
+              logo,
+              sequence: { startTime, endTime, sequenceId },
+            } = group;
+            const text = group.getText();
+            const startOfPosterFrame = group.getStartOfPosterFrame();
+  
+            const logoUrl = hasLogo
+              ? animationsService.logoToUrl(logo, '30x30')
+              : '';
+  
+            animations.push({
+              type: 'animation',
+              startTime: Math.round(startTime),
+              endTime: Math.round(endTime),
+              duration: Math.round(endTime - startTime),
+              startOfPosterFrame,
+              sequenceId,
+              uid: sequenceId,
+              text,
+              left: timeToPercent(startTime),
+              width: timeToPercent(endTime - startTime),
+              logoUrl,
+              object: group,
+              resizeOptions: {
+                containment: '.animations-timeline',
+                handles: {
+                  e: '.right-duration-handle',
+                  w: '.left-duration-handle',
+                },
+                // Don't round otherwise jQuery might not let the animation be reduced to the min size
+                // E.g. 3:01 instead of 3:00
+                minWidth: timeToWidth(
+                  Math.max(MIN_DURATION, group.sequence.getMinDuration())
+                ),
+                start: onStartResize,
+                resize: onResize,
+                stop: onStopResize,
+              },
+            });
+          });
+  
+          $scope.animations = animations.sort(
+            (a:any, b:any) => a.startTime - b.startTime
+          );
+  
+          setLeftRightBounds($scope.animations);
+        };
+  
+        /**
+         * Load videos from canvas and build data structure to be rendered in
+         * timeline.
+         */
+        const loadTimesFromVideos = () => {
+          $scope.videos = [];
+          const videos = getVideos();
+          videos.forEach((video:any) => {
+            const { duration, totalLength, startTime, offset } = video;
+  
+            $scope.videos.push({
+              type: 'video',
+              duration,
+              totalLength,
+              startTime: Math.round(startTime),
+              endTime: Math.round(startTime + duration),
+              offset,
+              endOffset: totalLength - offset - duration,
+              uid: video.uid,
+              left: timeToPercent(startTime),
+              width: timeToPercent(duration),
+              poster: video.poster,
+              thumb: video.thumb,
+              object: video,
+              resizeOptions: {
+                containment: '.videos-timeline',
+                handles: {
+                  e: '.right-duration-handle',
+                  w: '.left-duration-handle',
+                },
+                // Don't round otherwise jQuery might not let the video be reduced to the min size
+                // E.g. 3:01 instead of 3:00
+                minWidth: timeToWidth(MIN_DURATION),
+                start: onStartResize,
+                resize: onResize,
+                stop: onStopResize,
+              },
+            });
+  
+            $scope.videos = $scope.videos.sort(
+              (a:any, b:any) => a.startTime - b.startTime
+            );
+  
+            setLeftRightBounds($scope.videos);
+          });
+        };
+  
+        const reloadList = (reloadVideos:any, reloadAnimations:any) => {
+          if (reloadVideos) {
+            loadTimesFromVideos();
+          }
+          if (reloadAnimations) {
+            loadTimesFromGroups();
+          }
+  
+          // Some effects use undefined for initial values, meaning to use the current value
+          // We playing a full animation these values are calculated before start. However,
+          // when jumping around the timeline the values can get messed up. Calling this method
+          // whenever anything changes fill the unknowns with the correct values
+          animationsService.fillUnknownMissingValues(
+            $scope.animations.map(({ object }:any) => object.getSequence()),
+            $scope.videos.map(({ object }:any) => object)
+          );
+        };
+  
+        const windowResizeListener = _.debounce(() => {
+          mainTag = mainTag || $document.find('main')[0];
+          const diff = windowElement.innerWidth() - mainTag.clientWidth;
+          $scope.windowHorizontalScroll = diff < 0 ? Math.abs(diff) : 0;
+        }, 300);
+  
+        /**
+         * Play/stop videos and animations in canvas.
+         */
+        $scope.videoPreview = () => {
+          if (!$scope.videos.length && !$scope.animations.length) {
+            return;
+          }
+          $scope.selectedSequenceId = null;
+          if ($scope.isVideoPlaying) {
+            animationsService.stopAnimation();
+          } else {
+            animationsService.startAnimation($scope.currentTime);
+          }
+        };
+  
+        /**
+         * Delete animation or video from canvas.
+         * @param event Click event data.
+         * @param object Animation or video to be deleted.
+         */
+        $scope.deleteObject = (event:any, object:any) => {
+          event.stopPropagation();
+          const type = object.type === 'video' ? 'clip' : 'text';
+          modalService
+            .open({
+              body: {
+                line0: `Delete ${type}?`,
+                line1: `Do you want to delete this ${type} from your video?`,
+              },
+              warning: true,
+            })
+            .then(() => {
+              fabricService.removeElement(object.object);
+              canvas.renderAll();
+            });
+        };
+  
+        $scope.handelTimelineItemClick = _.throttle(
+          item => {
+            if (draggingItem) {
+              return;
+            }
+            setCurrentTime(item.startOfPosterFrame || item.startTime);
+          },
+          500,
+          { trailing: false }
+        );
+  
+        /**
+         * Store the dragging animation for when it is dropped.
+         * {@link http://api.jqueryui.com/draggable/} For information about params.
+         * @param event
+         * @param ui
+         * @param item Object that is being dragged.
+         */
+        $scope.onStartDraggingObject = (event, ui, item) => {
+          animationsService.stopAnimation();
+          updateScrollZoneElementWidth();
+          draggingItem = item;
+          draggingItem.originalStartTime = item.startTime;
+        };
+  
+        /**
+         * Handler for drop event. Update startTime of canvas object.
+         * {@link http://api.jqueryui.com/draggable/} For information about params.
+         * @param event
+         * @param ui
+         */
+        $scope.onDropObject = (event:any, ui:any) => {
+          // The dropped item might not be a timeline object, e.g. it might be a video or image
+          if (!draggingItem) {
+            return;
+          }
+  
+          const draggingId = draggingItem.uid;
+          const startTime = Math.round(widthToDuration(ui.position.left));
+          const endTime = Math.round(startTime + draggingItem.duration);
+  
+          const objects =
+            draggingItem.type === 'video' ? $scope.videos : $scope.animations;
+  
+          // Check if the dropped animation overlaps with any other animations
+          // if so reload to put it back in it's original position
+          const overlappingObjects = objects.filter(object => {
+            const objectId = object.uid || object.sequenceId;
+            return (
+              objectId !== draggingId && // ignore the dragged sequence
+              object.startTime < endTime &&
+              object.endTime > startTime
+            );
+          });
+  
+          if (overlappingObjects.length) {
+            draggingItem.object.setStartTime(draggingItem.originalStartTime);
+            reloadList(
+              draggingItem.type === 'video',
+              draggingItem.type !== 'video'
+            );
+            draggingItem = null;
+            return;
+          }
+  
+          // There is no overlap update the state time (the group's code will take care of the end time)
+          // Reload to calculate new min/max sizes for all animations
+          draggingItem.object.setStartTime(startTime);
+          reloadList(
+            draggingItem.type === 'video',
+            draggingItem.type !== 'video'
+          );
+          currentCompositionService.updateComposition();
+          draggingItem = null;
+  
+          // match the canvas to what currently appears on the screen
+          // e.g. if an animation was dropped on the scrubber it should now appear
+          setObjectsToTime();
+        };
+  
+        $scope.onStartDragPosition = (event:any) => {
+          event.stopPropagation();
+        };
+  
+        $scope.onDragPosition = (event:any, ui:any) => {
+          if ($(event.target).hasClass('scrubber')) {
+            setCurrentTime(positionToTime(ui.position.left));
+          }
+        };
+  
+        /**
+         * Update startTime and endTime of object that is being dragged.
+         * {@link http://api.jqueryui.com/resizable/} For information about params.
+         * @param event
+         * @param ui
+         */
+        $scope.updateStartTime = (event:any, ui:any) => {
+          draggingItem.startTime =
+            (ui.position.left / scrollZoneWidth) * timeLengthMilliseconds;
+          draggingItem.endTime = draggingItem.startTime + draggingItem.duration;
+          setObjectsToTime();
+          draggingItem.object.setStartTime(draggingItem.startTime);
+          $scope.$apply();
+        };
+  
+        /**
+         * Called when the user clicks on the ruler.
+         * Show the animation that matches the second clicked, hide all other animations,
+         */
+        $scope.handleRulerClick = (event:any) => {
+          setCurrentTime(
+            positionToTime(
+              event.pageX - angular.element(event.currentTarget).offset().left
+            )
+          );
+        };
+  
+        const animationStarted = () => {
+          lockAnimations();
+          setTimeout(() => {
+            $scope.isVideoPlaying = true;
+          });
+        };
+  
+        const animationStopped = () => {
+          setTimeout(() => {
+            $scope.isVideoPlaying = false;
+            // ensure the active animation is editable (has a fabric control box)
+            setObjectsToTime();
+          });
+        };
+  
+        const updatePositionIndicator = (data:any) => {
+          $timeout(() => {
+            $scope.currentTime = data.elapsedMilliseconds;
+            $scope.positionIndicator = timeToWidth(data.elapsedMilliseconds);
+          });
+        };
+  
+        /**
+         * Render animations and videos every time an object is added from the
+         * canvas. Update selectedSequenceId if animation is added.
+         *
+         */
+        const onObjectAdded = ({ target: object }:any) => {
+          if (canvas.isInStoryMode()) {
+            const { sequenceId, posterFrame, skipObject } = object;
+            if (skipObject) {
+              return;
+            }
+  
+            let offset = 0;
+            if (sequenceId) {
+              $scope.selectedSequenceId = sequenceId;
+              offset = posterFrame;
+            }
+            object.lockObject();
+  
+            updateScrollZoneElementWidth();
+            reloadList(true, true);
+            setObjectsToTime(offset + object.startTime);
+          }
+        };
+  
+        /**
+         * Render animations and videos every time an object is deleted from the
+         * canvas. Update selectedSequenceId if selected animation is deleted.
+         */
+        const onObjectRemoved = (data:any) => {
+          if (!canvas.isInStoryMode()) {
+            return;
+          }
+  
+          // If the grid is active, this callback is executed when the lines are
+          // removed, in that case we do nothing
+          if (data.target.type === 'line' && data.target.excludeFromExport) {
+            return;
+          }
+  
+          animationsService.stopAnimation();
+          if ($scope.selectedSequenceId === data.target.sequenceId) {
+            $scope.selectedSequenceId = null;
+          }
+          updateScrollZoneElementWidth();
+          reloadList(true, true);
+        };
+  
+        const onCanvasCleared = () => {
+          $scope.animations = [];
+          $scope.videos = [];
+          $scope.selectedSequenceId = null;
+          setCurrentTime(0);
+        };
+  
+        const onSelectionCleared = () => {
+          $scope.selectedSequenceId = null;
+        };
+  
+        const onSelectionUpdated = (data:any) => {
+          if (data.target.type === 'AnimatedGroup') {
+            $scope.selectedSequenceId = data.target.sequence.sequenceId;
+          }
+        };
+  
+        // We don't use $onInit as perfect scroll bar takes some milliseconds to
+        // be initialised, scroll-zone won't exist for example, and then it'll
+        // crash
+        // noinspection JSUnusedGlobalSymbols
+        this.$postLink = () => {
+          scrollZoneElement = angular.element($document.find('.scroll-zone'))[0];
+          updateScrollZoneElementWidth();
+  
+          windowElement = angular.element($window);
+          windowElement.on('resize', windowResizeListener);
+          windowResizeListener();
+  
+          fabricCanvas.on('animation:started', animationStarted);
+          fabricCanvas.on('animation:ended', animationStopped);
+          fabricCanvas.on('animation:paused', animationStopped);
+          fabricCanvas.on('animation:frame-updated', updatePositionIndicator);
+          fabricCanvas.on('object:added', onObjectAdded);
+          fabricCanvas.on('object:removed', onObjectRemoved);
+          fabricCanvas.on('canvas:cleared', onCanvasCleared);
+          fabricCanvas.on('selection:cleared', onSelectionCleared);
+          fabricCanvas.on('selection:updated', onSelectionUpdated);
+          fabricCanvas.on('selection:created', onSelectionUpdated);
+  
+          // Watch changes on text so timeline is updated
+          $scope.$watch(
+            () => {
+              const texts = [];
+              $scope.animations.forEach((animation:any) => {
+                texts.push(animation.object.getText());
+              });
+              return texts.join(',');
+            },
+            (newVal:any) => {
+              if (!newVal) {
+                return;
+              }
+  
+              $scope.animations.forEach((animation:any) => {
+                animation.text = animation.object.getText();
+              });
+            }
+          );
+        };
+  
+        // Clean up events
+        this.$onDestroy = () => {
+          canvas.off('animation:started', animationStarted);
+          canvas.off('animation:ended', animationStopped);
+          canvas.off('animation:paused', animationStopped);
+          canvas.off('animation:frame-updated', updatePositionIndicator);
+          canvas.off('object:added', onObjectAdded);
+          canvas.off('object:removed', onObjectRemoved);
+          canvas.off('canvas:cleared', onCanvasCleared);
+          canvas.off('selection:cleared', onSelectionCleared);
+          canvas.off('selection:updated', onSelectionUpdated);
+          canvas.off('selection:created', onSelectionUpdated);
+          windowElement.off('resize', windowResizeListener);
+        }
+}

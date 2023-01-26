@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 60.1 (88133) - https://sketch.com -->
+    <desc>Created with Sketch.</desc>
+    <g id="canvas-size-icon" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Dev-hand-over" transform="translate(-30.000000, -113.000000)" fill="#F5F5F5" fill-rule="nonzero">
+            <g style="fill:currentColor; stroke:currentColor; stroke: none" id="noun_increase-size_310145" transform="translate(30.000000, 113.000000)">
+                <path d="M27.2679739,28 L0.732026144,28 C0.366013072,28 0,27.7245902 0,27.2655738 L0,0.642622951 C0,0.275409836 0.274509804,0 0.732026144,0 L27.2679739,0 C27.6339869,0 28,0.275409836 28,0.642622951 L28,27.2655738 C28,27.6327869 27.6339869,28 27.2679739,28 Z M1.46405229,26.6229508 L26.627451,26.6229508 L26.627451,1.37704918 L1.46405229,1.37704918 L1.46405229,26.6229508 Z" id="Shape"></path>
+                <polygon id="Rectangle" transform="translate(19.827094, 19.817041) rotate(45.000000) translate(-19.827094, -19.817041) " points="14.4495418 19.1334538 25.204647 19.1334538 25.204647 20.5006282 14.4495418 20.5006282"></polygon>
+                <polygon id="Path" points="24 24 17 24 17 22.6363636 22.6363636 22.6363636 22.6363636 17 24 17"></polygon>
+                <polygon id="Rectangle" transform="translate(8.173452, 8.182594) rotate(45.000000) translate(-8.173452, -8.182594) " points="2.79589988 7.49900721 13.5510051 7.49900721 13.5510051 8.8661816 2.79589988 8.8661816"></polygon>
+                <polygon id="Path" points="4.36363636 10 3 10 3 3 10 3 10 4.36363636 4.36363636 4.36363636"></polygon>
+            </g>
+        </g>
+    </g>
+</svg>

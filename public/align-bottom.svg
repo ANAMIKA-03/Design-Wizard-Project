@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="21px" height="21px" viewBox="0 0 21 21" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <g stroke="none" stroke-width="1">
+        <g transform="translate(-158.000000, -182.000000)">
+            <g transform="translate(10.000000, 162.000000)">
+                <g transform="translate(148.000000, 20.000000)">
+                    <path d="M0,19.7647059 L16.0588235,19.7647059 L16.0588235,21 L0,21 L0,19.7647059 Z M0,14.8235294 L21,14.8235294 L21,16.0588235 L0,16.0588235 L0,14.8235294 Z M9.88235294,0 L11.1176471,0 L11.1176471,10.1911765 L15.1323529,6.17647059 L16.0588235,6.99176471 L10.5,12.5505882 L4.94117647,6.99176471 L5.86764706,6.17647059 L9.88235294,10.1911765 L9.88235294,0 Z" id="Shape"></path>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 350">
+  <title>download</title>
+  <g id="download_icon">
+    <line x1="174.99" y1="61.16" x2="174.99" y2="214.24" style="fill:none;stroke:currentColor;stroke-miterlimit:10;stroke-width:20px"/>
+    <path d="M227,175.76l-51.81,65.4L123,175.58Z" style="fill:currentColor;stroke:currentColor;stroke-miterlimit:10;stroke-width:3.55771423587918px"/>
+    <polyline points="52.6 213.28 52.6 281.6 297.4 281.6 297.4 213.28" style="fill:none;stroke:currentColor;stroke-miterlimit:10;stroke-width:20px"/>
+  </g>
+</svg>

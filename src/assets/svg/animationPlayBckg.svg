@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="174px" height="175px" viewBox="0 0 174 175" version="1.1" xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink">
+  <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+    <g transform="translate(-148.000000, -986.000000)">
+      <g transform="translate(146.000000, 985.000000)">
+        <circle fill="#B64AA9" cx="31.7426407" cy="154.5" r="3.5"></circle>
+        <circle stroke="#E82C53" stroke-width="0.8" cx="142" cy="169" r="6"></circle>
+        <g transform="translate(8.500000, 42.500000) rotate(-315.000000) translate(-8.500000, -42.500000) translate(3.000000, 37.000000)"
+           fill="#3673F5" fill-rule="nonzero">
+          <g transform="translate(0.828427, 0.171573)">
+            <path
+              d="M0.711572875,0.828427125 C0.413339875,0.828427125 0.171572875,1.07018503 0.171572875,1.36842691 L0.171572875,9.28842734 C0.171572875,9.58666922 0.413339875,9.82842712 0.711572875,9.82842712 L8.63157288,9.82842712 C8.9298057,9.82842712 9.17157288,9.58666922 9.17157288,9.28842734 L9.17157288,1.36842691 C9.17157288,1.07018503 8.9298057,0.828427125 8.63157288,0.828427125 L0.711572875,0.828427125 L0.711572875,0.828427125 Z M1.25157288,1.90842669 L8.09157288,1.90842669 L8.09157288,8.74842756 L1.25157288,8.74842756 L1.25157288,1.90842669 Z"
+              id="Shape"></path>
+          </g>
+        </g>
+        <g transform="translate(172.257679, 48.857167) rotate(59.000000) translate(-172.257679, -48.857167) translate(166.757679, 43.857167)"
+           fill="#00C6C0" fill-rule="nonzero">
+          <g transform="translate(0.186103, 0.328935)">
+            <polygon points="5 0.08358 10 8.85281538 0 8.85281538"></polygon>
+          </g>
+        </g>
+        <rect fill="#D464DC"
+              transform="translate(106.500000, 5.500000) rotate(-339.000000) translate(-106.500000, -5.500000) " x="103"
+              y="2" width="7" height="7"></rect>
+      </g>
+    </g>
+  </g>
+</svg>

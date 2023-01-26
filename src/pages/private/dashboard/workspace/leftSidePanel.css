@@ -1,0 +1,55 @@
+.child {
+  height: 19px;
+  width: 32px;
+  position: absolute;
+  top: 13px;
+  left: 15px;
+  animation-duration: 0.5s;
+  animation-iteration-count: infinite;
+  transform-origin: bottom;
+}
+
+.childuploads {
+  height: 19px;
+  width: 32px;
+  position: absolute;
+  top: 26px;
+  left: 44px;
+  animation-duration: 0.5s;
+  animation-iteration-count: infinite;
+  transform-origin: bottom;
+}
+
+.containeruploads:hover .childuploads {
+  animation-name: bounceuploads;
+  animation-timing-function: ease;
+}
+
+.container:hover > .child {
+  animation-name: bounce;
+  animation-timing-function: ease;
+}
+
+@keyframes bounce {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceuploads {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
